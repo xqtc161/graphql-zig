@@ -1,0 +1,30 @@
+image: nixos/latest
+
+submitter:
+  git.sr.ht:
+    enabled: true
+    allow-refs:
+      - refs/heads/trunk
+      - "refs/tags/*"
+
+sources:
+  - https://git.sr.ht/~xqtc/graphql-zig
+
+secrets:
+  - c40c8831-3328-440b-94f3-cda32d688fcb
+
+environment:
+  NIX_CONFIG: experimental-features = nix-command flakes
+
+tasks:
+  - mirror: |
+      cd graphql-zig
+      ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
+      git remote add github git@github.com:xqtc161/graphql-zig.git
+      git push --force github HEAD:trunk
+
+  - build: |
+      cd graphql-zig
+      nix run .#build
+
+
