@@ -28,35 +28,8 @@ pub const Client = struct {
     }
 
     pub fn execute(self: *Client, query: []const u8, variables: anytype) !Response {
-        var body_writer: std.Io.Writer.Allocating = .init(self.allocator);
-        defer body_writer.deinit();
-
-        try std.json.Stringify.value(
-            .{
-                .query = query,
-                .variables = variables,
-            },
-            .{},
-            &body_writer.writer,
-        );
-
-        var response_writer: std.Io.Writer.Allocating = .init(self.allocator);
-        defer response_writer.deinit();
-
-        const result = try self.http_client.fetch(.{
-            .method = .POST,
-            .location = .{ .uri = try std.Uri.parse(self.endpoint) },
-            .headers = .{
-                .content_type = .{ .override = "application/json" },
-            },
-            .extra_headers = self.headers,
-            .payload = body_writer.written(),
-            .response_writer = &response_writer.writer,
-        });
-
-        if (result.status != .ok) {
-            return error.UnexpectedStatus;
-        }
+        const body = try self.rawFetch(query, variables);
+        defer self.allocator.free(body);
 
         var arena: std.heap.ArenaAllocator = .init(self.allocator);
         errdefer arena.deinit();
@@ -64,7 +37,7 @@ pub const Client = struct {
         const parsed = try std.json.parseFromSliceLeaky(
             std.json.Value,
             arena.allocator(),
-            response_writer.written(),
+            body,
             .{},
         );
         const obj = switch (parsed) {
@@ -96,11 +69,43 @@ pub const Client = struct {
 
             break :blk try list.toOwnedSlice(arena.allocator());
         } else &.{};
+
         return .{
             .arena = arena,
             .data = data,
             .errors = errors,
         };
+    }
+
+    fn rawFetch(self: *Client, query: []const u8, variables: anytype) ![]u8 {
+        var body_writer: std.Io.Writer.Allocating = .init(self.allocator);
+        defer body_writer.deinit();
+
+        try std.json.Stringify.value(.{
+            .query = query,
+            .variables = variables,
+        }, .{}, &body_writer.writer);
+
+        var response_writer: std.Io.Writer.Allocating = .init(self.allocator);
+        errdefer response_writer.deinit();
+
+        const result = try self.http_client.fetch(.{
+            .method = .POST,
+            .location = .{ .uri = self.endpoint },
+            .headers = .{ .content_type = .{ .override = "application/json" } },
+            .extra_headers = self.headers,
+            .payload = body_writer.written(),
+            .response_writer = &response_writer.writer,
+        });
+
+        if (result.status != .ok) return error.UnexpectedStatus;
+
+        return response_writer.toOwnedSlice(self.allocator);
+    }
+
+    pub fn executeTyped(comptime T: type, query: []const u8, variables: anytype) !TypedResponse(T) {
+        _ = query; // autofix
+        _ = variables; // autofix
     }
 };
 
