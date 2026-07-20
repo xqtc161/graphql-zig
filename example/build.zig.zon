@@ -1,0 +1,16 @@
+.{
+    .name = .example,
+    .version = "0.0.0",
+    .fingerprint = 0x6eec9b9f2519c099,
+    .minimum_zig_version = "0.16.0",
+    .dependencies = .{
+        .graphql = .{
+            .path = "../",
+        },
+    },
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+    },
+}

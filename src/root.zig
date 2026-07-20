@@ -161,3 +161,91 @@ fn parseTypedResponse(comptime T: type, allocator: std.mem.Allocator, body: []co
         .errors = parsed.errors,
     };
 }
+
+test "parseResponse extracts data" {
+    const body =
+        \\{"data":{"foo":"bar"}}
+    ;
+    var response = try parseResponse(std.testing.allocator, body);
+    defer response.deinit();
+
+    try std.testing.expect(response.errors.len == 0);
+    const data = response.data.?;
+    try std.testing.expectEqualStrings("bar", data.object.get("foo").?.string);
+}
+
+test "parseResponse extracts errors" {
+    const body =
+        \\{"data":null,"errors":[{"message":"field not found"}]}
+    ;
+    var response = try parseResponse(std.testing.allocator, body);
+    defer response.deinit();
+
+    try std.testing.expectEqual(1, response.errors.len);
+    try std.testing.expectEqualStrings("field not found", response.errors[0].msg);
+}
+
+test "parseResponse skips malformed error entries" {
+    const body =
+        \\{"errors":[{"message":"good"},"not an object",{"nope":"missing message"}]}
+    ;
+    var response = try parseResponse(std.testing.allocator, body);
+    defer response.deinit();
+
+    try std.testing.expectEqual(1, response.errors.len);
+    try std.testing.expectEqualStrings("good", response.errors[0].msg);
+}
+
+test "parseResponse rejects non-object root" {
+    const body =
+        \\[1, 2, 3]
+    ;
+    try std.testing.expectError(
+        error.UnexpectedResponseShape,
+        parseResponse(std.testing.allocator, body),
+    );
+}
+
+test "parseTypedResponse decodes into a struct" {
+    const Data = struct {
+        user: struct {
+            name: []const u8,
+        },
+    };
+
+    const body =
+        \\{"data":{"user":{"name":"test"}}}
+    ;
+    var response = try parseTypedResponse(Data, std.testing.allocator, body);
+    defer response.deinit();
+
+    try std.testing.expectEqual(0, response.errors.len);
+    try std.testing.expectEqualStrings("test", response.data.?.user.name);
+}
+
+test "parseTypedResponse ignores unknown fields like extensions" {
+    const Data = struct { ok: bool };
+    const body =
+        \\{"data":{"ok":true},"extensions":{"tracing":{}}}
+    ;
+    var response = try parseTypedResponse(Data, std.testing.allocator, body);
+    defer response.deinit();
+
+    try std.testing.expect(response.data.?.ok);
+}
+
+test "request body serialization matches expected shape" {
+    var body_writer: std.Io.Writer.Allocating = .init(std.testing.allocator);
+    defer body_writer.deinit();
+
+    try std.json.Stringify.value(
+        .{ .query = "{ viewer { login } }", .variables = .{ .login = "test" } },
+        .{},
+        &body_writer.writer,
+    );
+
+    const expected =
+        \\{"query":"{ viewer { login } }","variables":{"login":"test"}}
+    ;
+    try std.testing.expectEqualStrings(expected, body_writer.written());
+}
