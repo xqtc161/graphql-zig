@@ -27,6 +27,10 @@ tasks:
       cd graphql-zig
       nix run .#build
 
+  - test: |
+      cd graphql-zig
+      nix run .#test
+
   - lint: |
       cd graphql-zig
       url=$(curl -sL https://api.github.com/repos/rockorager/ziglint/releases/latest \

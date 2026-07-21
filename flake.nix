@@ -64,7 +64,7 @@
         apps.build = env.app [ ] "zig build \"$@\"";
 
         # nix run .#test
-        apps.test = env.app [ ] "zig build test -- \"$@\"";
+        apps.test = env.app [ ] "zig build test --summary all -- \"$@\"";
 
         # nix run .#docs
         apps.docs = env.app [ ] "zig build docs -- \"$@\"";
