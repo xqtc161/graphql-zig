@@ -22,6 +22,7 @@ tasks:
       ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
       git remote add github git@github.com:xqtc161/graphql-zig.git
       git push --force github HEAD:trunk
+      git push --force --tags github HEAD:trunk
 
   - build: |
       cd graphql-zig
