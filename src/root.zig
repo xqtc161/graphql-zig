@@ -25,6 +25,7 @@ pub const Client = struct {
 
     pub fn deinit(self: *Client) void {
         self.http_client.deinit();
+        self.* = undefined;
     }
 
     pub fn execute(self: *Client, query: []const u8, variables: anytype) !Response {
@@ -70,10 +71,11 @@ pub const Client = struct {
 pub const Response = struct {
     arena: std.heap.ArenaAllocator,
     data: ?std.json.Value,
-    errors: []const GraphQLError,
+    errors: []const GraphQlError,
 
     pub fn deinit(self: *Response) void {
         self.arena.deinit();
+        self.* = undefined;
     }
 };
 
@@ -81,15 +83,16 @@ pub fn TypedResponse(comptime T: type) type {
     return struct {
         arena: std.heap.ArenaAllocator,
         data: ?T,
-        errors: []const GraphQLError,
+        errors: []const GraphQlError,
 
-        pub fn deinit(self: *@This()) void {
+        const Self = @This();
+        pub fn deinit(self: *Self) void {
             self.arena.deinit();
         }
     };
 }
 
-pub const GraphQLError = struct {
+pub const GraphQlError = struct {
     msg: []const u8,
     path: ?[]const std.json.Value = null,
 };
@@ -110,13 +113,13 @@ fn parseResponse(allocator: std.mem.Allocator, body: []const u8) !Response {
     };
     const data: ?std.json.Value = obj.get("data");
 
-    const errors: []const GraphQLError = if (obj.get("errors")) |errs_val| blk: {
+    const errors: []const GraphQlError = if (obj.get("errors")) |errs_val| blk: {
         const errs_arr = switch (errs_val) {
             .array => |a| a,
             else => return error.UnexpectedResponseShape,
         };
 
-        var list: std.ArrayList(GraphQLError) = .empty;
+        var list: std.ArrayList(GraphQlError) = .empty;
         for (errs_arr.items) |err_val| {
             const err_obj = switch (err_val) {
                 .object => |o| o,
@@ -145,7 +148,7 @@ fn parseTypedResponse(comptime T: type, allocator: std.mem.Allocator, body: []co
 
     const Envelope = struct {
         data: ?T = null,
-        errors: []const GraphQLError = &.{},
+        errors: []const GraphQlError = &.{},
     };
 
     const parsed = try std.json.parseFromSliceLeaky(
