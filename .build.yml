@@ -27,4 +27,14 @@ tasks:
       cd graphql-zig
       nix run .#build
 
+  - lint: |
+      cd graphql-zig
+      url=$(curl -sL https://api.github.com/repos/rockorager/ziglint/releases/latest \
+        | grep browser_download_url \
+        | grep ziglint-x86_64-linux.tar.gz \
+        | head -1 \
+        | cut -d '"' -f 4)
+      curl -sL "$url" | tar xz
+      ./ziglint src
+
 
