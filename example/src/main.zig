@@ -1,19 +1,3 @@
-# graphql-zig
-
-[![builds.sr.ht status](https://builds.sr.ht/~xqtc/graphql-zig/commits/trunk.svg)](https://builds.sr.ht/~xqtc/graphql-zig/commits/trunk?)
-
-A simple GraphQL client library. Can fetch endpoints and parse the response.
-
-Supports typed and untyped responses. For typed response look at the example.
-
-> [!NOTE]
-> I'll eventually try to expand this project to handle more GraphQL features, but for now this is all I need.
-
-## Example
-
-You can also run the example directly from the `example/` dir.
-
-``` zig
 const std = @import("std");
 const graphql = @import("graphql");
 
@@ -41,7 +25,10 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
     var client = try graphql.Client.init(
-        allocator, io, "https://graphql.anilist.co", &.{}
+        allocator,
+        io,
+        "https://graphql.anilist.co",
+        &.{},
     );
     defer client.deinit();
 
@@ -84,8 +71,3 @@ pub fn main(init: std.process.Init) !void {
     }
     try stdout.flush();
 }
-```
-
-## License
-
-[MIT](LICENSE)

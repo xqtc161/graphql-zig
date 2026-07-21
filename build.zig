@@ -9,5 +9,12 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    _ = graphql_mod; // autofix
+    const gql_tests = b.addTest(.{
+        .root_module = graphql_mod,
+    });
+
+    const run_gql_tests = b.addRunArtifact(gql_tests);
+
+    const test_step = b.step("test", "Run tests");
+    test_step.dependOn(&run_gql_tests.step);
 }
